@@ -6,7 +6,6 @@ import os
 import time
 from pathlib import Path
 from playsound3 import playsound
-import Dude
 
 # needed to add pngs to exe
 def resource_path(relative_path):
