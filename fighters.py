@@ -3,9 +3,10 @@ import random as rand
 from PIL import Image, ImageTk
 import sys
 import os
+import time
 from pathlib import Path
 from playsound3 import playsound
-import math
+import Dude
 
 # needed to add pngs to exe
 def resource_path(relative_path):
@@ -30,55 +31,90 @@ def get_images_folder():
     os.makedirs(images_dir, exist_ok=True)
     return images_dir
 
-class Fight:
-    def __init__(self):
-        self.root = tk.Tk()
-
-        self.setup_window()
-
+class Dude:
+    def __init__(self, player, root):
         self.width = 240
         self.height = 240
 
-        self.speed = 5
-        # SPEED DEBUGGING
-        # self.speed = 30
+        self.screen_height = root.winfo_screenheight()
+        self.screen_width = root.winfo_screenwidth()
 
-        self.score1 = 0
-        self.score2 = 0
+        self.speed = rand.choice([100, 150, 200])
 
-        self.high_score = 0
+        self.score = 0
 
-        # comment out this, uncomment below to force a corner hit
-        # initial pos, center of screen
-        self.x = self.root.winfo_screenwidth()/4 - self.width/2
-        self.y = self.root.winfo_screenheight()/2 - self.width/2
-
-        self.x2 = self.root.winfo_screenwidth()*.75 - self.width/2
-        self.y2 = self.root.winfo_screenheight()/2 - self.width/2
+        self._initial_pos(player, root)
 
         #small variance in starting pos
         self.x += rand.randint(-200, 200)
         self.y += rand.randint(-200, 200)
 
-        self.x2 += rand.randint(-200, 200)
-        self.y2 += rand.randint(-200, 200)
-
-        # speed, random direction
+        # random direction
         dir = [self.speed, -self.speed]
         self.dx = rand.choice(dir)
         self.dy = rand.choice(dir)
 
-        self.dx2 = -self.dx
-        self.dy2 = -self.dy
+    def _initial_pos(self, player, root):
+        # left side start
+        if player == 1:
+            self.x = self.screen_width/4 - self.width/2
+            self.y = self.screen_height/2 - self.height/2
+        # right side start
+        else:
+            self.x = self.screen_width*.75 - self.width/2
+            self.y = self.screen_height/2 - self.width/2
 
-        # # comment out the above, uncomment this to force a corner hit
-        # self.x = 100
-        # self.y = 100
-        # self.dx = -3
-        # self.dy = -3
+    def update_pos(self, delta_time):
+
+        # update pos
+        self.x += self.dx * delta_time
+        self.y += self.dy * delta_time
+
+        # collision = False
+        corner = False
+
+        top = bool(self.y + self.height >= self.screen_height)
+        right = bool(self.x + self.width >= self.screen_width)
+        bottom = bool(self.y <= 0)
+        left = bool(self.x <= 0)
+
+        # bounce on collision
+        if right:
+            # flips sign of dx, randomizes speed
+            self.dx = rand.choice([-180, -150, -120])
+            if top or bottom:
+                corner = True
+        if top:
+            self.dy = rand.choice([-180, -150, -120])
+            if left or right:
+                corner = True
+        if left:
+            self.dx = rand.choice([120, 150, 180])
+            if top or bottom:
+                corner = True
+        if bottom:
+            self.dy = rand.choice([120, 150, 180])
+            if left or right:
+                corner = True
+
+        return corner
+    
+
+class Fight:
+                    
+    def __init__(self):
+        self.root = tk.Tk()
+
+        self.setup_window()
+
+        self.player1 = Dude(1, self.root)
+        self.player2 = Dude(2, self.root)
+
+        self.high_score = 0
 
         self.images = []
-        self.load_images()
+        self.load_images(self.player1)
+        self.load_images(self.player2)
         self.current_image_index = 0
         self.current_image_index2 = (int(len(self.images)/2))
 
@@ -86,7 +122,11 @@ class Fight:
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.root.bind('<Escape>', self.quit_app)
 
-    def load_images(self):
+        self.running = True
+
+        self.last_time = time.time()
+
+    def load_images(self, player):
 
         images_folder = get_images_folder()
         suffixes = [".png", ".jpg", ".jpeg", ".gif", ".bmp"]
@@ -96,7 +136,7 @@ class Fight:
             # filters for only images
             if file.suffix.lower() in suffixes:
                 img = Image.open(file)
-                img = img.resize((self.width, self.height), Image.Resampling.NEAREST)
+                img = img.resize((player.width, player.height), Image.Resampling.NEAREST)
                 photo = ImageTk.PhotoImage(img)
                 self.images.append(photo)
                 print(f"loaded image: {file.name}")
@@ -108,7 +148,7 @@ class Fight:
             print("no images found, creating default")
             colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange']
             for color in colors:
-                img = Image.new('RGB', (self.width, self.height), color)
+                img = Image.new('RGB', (240, 240), color)
                 photo = ImageTk.PhotoImage(img)
                 self.images.append(photo)
 
@@ -126,120 +166,27 @@ class Fight:
         # set window to fullscreen
         self.root.geometry(f"{self.screen_width}x{self.screen_height}+0+0")
 
-    def update_pos(self):
-
-        # update pos
-        self.x += self.dx
-        self.y += self.dy
-
-        # collision = False
-        corner = False
-
-        top = bool(self.y + self.height >= self.screen_height)
-        right = bool(self.x + self.width >= self.screen_width)
-        bottom = bool(self.y <= 0)
-        left = bool(self.x <= 0)
-
-        # bounce on collision
-        if right:
-            # flips sign of dx, randomizes speed between 4-6
-            self.dx = rand.randint(-6, -4)
-            if top or bottom:
-                corner = True
-        if top:
-            self.dy = rand.randint(-6, -4)
-            if left or right:
-                corner = True
-        if left:
-            self.dx = rand.randint(4, 6)
-            if top or bottom:
-                corner = True
-        if bottom:
-            self.dy = rand.randint(4, 6)
-            if left or right:
-                corner = True
-
-        if self.combat_collision():
-            if rand.randint(0,1):
-                self.change_image()
-                self.score1 = 0
-                self.score2 += 1
-                if self.score2 > self.high_score:
-                    self.high_score = self.score2
-            else:
-                self.change_image2()
-                self.score2 = 0
-                self.score1 += 1
-                if self.score1 > self.high_score:
-                    self.high_score = self.score1
-                
-        if corner:
-            sound_path = resource_path('taco_baco.mp3')
-            playsound(sound_path)
-            self.score1 += 5
-
-    def update_pos2(self):
-
-        # update pos
-        self.x2 += self.dx2
-        self.y2 += self.dy2
-
-        # collision = False
-        corner = False
-
-        top = bool(self.y2 + self.height >= self.screen_height)
-        right = bool(self.x2 + self.width >= self.screen_width)
-        bottom = bool(self.y2 <= 0)
-        left = bool(self.x2 <= 0)
-
-        # bounce on collision
-        if right:
-            self.dx2 = rand.randint(-6, -4)
-            if top or bottom:
-                corner = True
-        if top:
-            self.dy2 = rand.randint(-6, -4)
-            if left or right:
-                corner = True
-        if left:
-            self.dx2 = rand.randint(4, 6)
-            if top or bottom:
-                corner = True
-        if bottom:
-            self.dy2 = rand.randint(4, 6)
-            if left or right:
-                corner = True
-        if corner:
-            sound_path = resource_path('taco_baco.mp3')
-            playsound(sound_path)
-            self.score2 += 5
-            if self.score2 > self.high_score:
-                self.high_score = self.score2
-
     def combat_collision(self):
-        # check if rectangles are colliding
-        if (self.x < self.x2 + self.width and 
-            self.x + self.width > self.x2 and
-            self.y < self.y2 + self.height and 
-            self.y + self.height > self.y2):
-            
-            # calc overlap amounts
-            overlap_x = min(self.x + self.width - self.x2, self.x2 + self.width - self.x)
-            overlap_y = min(self.y + self.height - self.y2, self.y2 + self.height - self.y)
-            
-            # determine collision direction and exchange velocities
-            if overlap_x < overlap_y:  # horizontal collision
-                self.dx, self.dx2 = self.dx2, self.dx
-            else:  # vertical collision
-                self.dy, self.dy2 = self.dy2, self.dy
-                
+
+        p1 = self.player1
+        p2 = self.player2
+
+        if (p1.x < p2.x + p2.width and 
+            p1.x + p1.width > p2.x and
+            p1.y < p2.y + p2.height and
+            p1.y + p1.height > p2.y):
+
+
+            p1.dx, p2.dx = p2.dx, p1.dx
+            p1.dy, p2.dy = p2.dy, p1.dy
             return True
+        
         return False
 
-    def change_image(self):
+    def change_p1_image(self):
         self.current_image_index = (self.current_image_index + 1) % len(self.images)
 
-    def change_image2(self):
+    def change_p2_image(self):
         self.current_image_index2 = (self.current_image_index2 + 1) % len(self.images)
 
     def draw(self):
@@ -254,27 +201,27 @@ class Fight:
         )
 
         self.canvas.create_image(
-            self.x, self.y,
+            self.player1.x, self.player1.y,
             image = self.images[self.current_image_index],
             anchor = "nw"
         )
         self.canvas.create_text(
-            self.x+110, self.y-30,
-            text = self.score1,
+            self.player1.x + 110, self.player1.y-30,
+            text = self.player1.score,
             fill = "#ffffff",
             font = "Arial 32 bold",
             anchor = "nw"
         )
 
         self.canvas.create_image(
-            self.x2, self.y2,
+            self.player2.x, self.player2.y,
             image = self.images[self.current_image_index2],
             anchor = "nw"
         )
 
         self.canvas.create_text(
-            self.x2+110, self.y2-30,
-            text = self.score2,
+            self.player2.x + 110, self.player2.y-30,
+            text = self.player2.score,
             fill = "#ffffff",
             font = "Arial 32 bold",
             anchor = "nw"
@@ -289,20 +236,43 @@ class Fight:
         )
 
     def animate(self):
+
+        current_time = time.time()
+        delta_time = current_time - self.last_time
+        self.last_time = current_time
+
         # main animation loop
-        self.update_pos()
-        self.update_pos2()
+        if self.player1.update_pos(delta_time):           # returns corner hit T/F
+            playsound(resource_path('taco_baco.mp3'), block = False)
+            self.player1.score += 5
+
+        if self.player2.update_pos(delta_time):           # returns corner hit T/F
+            playsound(resource_path('taco_baco.mp3'), block = False)
+            self.player2.score += 5
+
+        if self.combat_collision():
+            if rand.randint(0, 1):
+                self.change_p1_image()
+                self.player1.score = 0
+                self.player2.score += 1
+            else:
+                self.change_p2_image()
+                self.player2.score = 0
+                self.player1.score += 1
+
+        self.high_score = max(self.high_score, self.player1.score, self.player2.score)
+
         self.draw()
 
-        # schedule next frame (roughly 60 FPS)
-        self.root.after(17, self.animate)
-
     def quit_app(self, event = None):
+        self.running = False
         self.root.destroy()
 
     def run(self):
-        self.animate()
-        self.root.mainloop()
+        while self.running:
+            self.animate()
+            self.root.update_idletasks()
+            self.root.update()
 
 if __name__ == "__main__":
     screensaver = Fight()
