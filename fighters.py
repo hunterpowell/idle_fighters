@@ -117,7 +117,7 @@ class Fight:
         self.current_image_index = 0
         self.current_image_index2 = (int(len(self.images)/2))
 
-        self.canvas = tk.Canvas(self.root, highlightthickness=0, bg='#000001')
+        self.canvas = tk.Canvas(self.root, highlightthickness=0, bg='#261313')
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.root.bind('<Escape>', self.quit_app)
 
@@ -157,7 +157,7 @@ class Fight:
         # always on top
         self.root.wm_attributes('-topmost', True)
         # make #000001 transparent
-        self.root.wm_attributes('-transparentcolor', '#000001')
+        self.root.wm_attributes('-transparentcolor', '#261313')
 
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
@@ -195,7 +195,7 @@ class Fight:
         self.canvas.create_rectangle(
             0, 0, 
             self.screen_width, self.screen_height, 
-            fill = '#000001', 
+            fill = "#261313", 
             outline = ''
         )
 
