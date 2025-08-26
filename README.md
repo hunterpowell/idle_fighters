@@ -10,11 +10,11 @@ A fun screensaver that bounces images around your screen with collision detectio
    - Add image files (.png, .jpg, .jpeg, .gif, .bmp)
    - Images are automatically resized to 240x240
 3. **Add sound** (optional):
-   - Place `taco_baco.mp3` in the same directory for corner hit sounds
+   - replace `taco_baco.mp3` in the same directory for corner hit sounds
 
 ## Usage
 
-Run the executable or: `python screensaver.py`
+Run the executable or: `python fighters.py`
 
 - Press **Escape** to exit
 - Two images bounce around the screen
@@ -24,8 +24,7 @@ Run the executable or: `python screensaver.py`
 ## File Structure
 ```
 your-directory/
-├── screensaver.py
-├── taco_baco.mp3 (optional)
+├── fighters.py
 └── images/
     ├── image1.png
     └── image2.jpg
@@ -35,5 +34,5 @@ your-directory/
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --noconsole screensaver.py
+pyinstaller --onefile --noconsole fighters.py
 ```
