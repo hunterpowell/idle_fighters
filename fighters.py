@@ -42,7 +42,7 @@ class Dude:
 
         self.score = 0
 
-        self._initial_pos(player, root)
+        self._initial_pos(player)
 
         #small variance in starting pos
         self.x += rand.randint(-200, 200)
@@ -53,7 +53,7 @@ class Dude:
         self.dx = rand.choice(dir)
         self.dy = rand.choice(dir)
 
-    def _initial_pos(self, player, root):
+    def _initial_pos(self, player):
         # left side start
         if player == 1:
             self.x = self.screen_width/4 - self.width/2
