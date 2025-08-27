@@ -30,6 +30,73 @@ def get_images_folder():
     os.makedirs(images_dir, exist_ok=True)
     return images_dir
 
+class AnimatedImage:
+    def __init__(self, filepath, width, height):
+        self.frames = []
+        self.frame_count = 0
+        self.current_frame = 0
+        self.frame_duration = 100
+        self.last_frame_time = time.time()
+
+        try:
+            img = Image.open(filepath)
+            
+            # check if it's an animated GIF
+            if hasattr(img, 'n_frames') and img.n_frames > 1:
+                # GIF
+                for frame_num in range(img.n_frames):
+                    img.seek(frame_num)
+                    frame = img.copy()
+                    frame = frame.resize((width, height), Image.Resampling.NEAREST)
+                    
+                    # Convert to RGBA if needed for transparency
+                    if frame.mode != 'RGBA':
+                        frame = frame.convert('RGBA')
+                    
+                    photo = ImageTk.PhotoImage(frame)
+                    self.frames.append(photo)
+                
+                # try to get frame duration from GIF
+                try:
+                    img.seek(0)
+                    self.frame_duration = img.info.get('duration', 100)
+                except:
+                    self.frame_duration = 100
+                    
+            else:
+                # static image
+                frame = img.resize((width, height), Image.Resampling.NEAREST)
+                if frame.mode != 'RGBA':
+                    frame = frame.convert('RGBA')
+                photo = ImageTk.PhotoImage(frame)
+                self.frames.append(photo)
+                
+            self.frame_count = len(self.frames)
+            
+        except Exception as e:
+            print(f"Error loading image {filepath}: {e}")
+            # create a fallback colored rectangle
+            fallback = Image.new('RGBA', (width, height), (255, 0, 0, 255))
+            photo = ImageTk.PhotoImage(fallback)
+            self.frames.append(photo)
+            self.frame_count = 1
+
+
+    def get_current_frame(self):
+        if self.frame_count <= 1:
+            return self.frames[0]
+
+        current_time = time.time()
+        if (current_time - self.last_frame_time) * 1000 >= self.frame_duration:
+            self.current_frame = (self.current_frame + 1) % self.frame_count
+            self.last_frame_time = current_time
+
+        return self.frames[self.current_frame]
+    
+    def reset_animation(self):
+        self.current_frame = 0
+        self.last_frame_time = time.time()
+
 class Dude:
     def __init__(self, player, root):
         self.width = 240
@@ -111,11 +178,12 @@ class Fight:
 
         self.high_score = 0
 
+        self.animated_images = []
         self.images = []
         self.load_images(self.player1)
         self.load_images(self.player2)
         self.current_image_index = 0
-        self.current_image_index2 = (int(len(self.images)/2))
+        self.current_image_index2 = (int(len(self.animated_images)/2))
 
         self.canvas = tk.Canvas(self.root, highlightthickness=0, bg='#261313')
         self.canvas.pack(fill=tk.BOTH, expand=True)
@@ -134,22 +202,26 @@ class Fight:
         for file in Path(images_folder).iterdir():
             # filters for only images
             if file.suffix.lower() in suffixes:
-                img = Image.open(file)
-                img = img.resize((player.width, player.height), Image.Resampling.NEAREST)
-                photo = ImageTk.PhotoImage(img)
-                self.images.append(photo)
+                animated_img = AnimatedImage(str(file), self.player1.width, self.player1.height)
+                self.animated_images.append(animated_img)
                 print(f"loaded image: {file.name}")
         # random order :)
-        rand.shuffle(self.images)
+        rand.shuffle(self.animated_images)
 
         # if no images found, use some rectangles
-        if not self.images:
+        if not self.animated_images:
             print("no images found, creating default")
             colors = ['red', 'green', 'blue', 'yellow', 'purple', 'orange']
             for color in colors:
-                img = Image.new('RGB', (240, 240), color)
+                # Create a simple colored rectangle as fallback
+                img = Image.new('RGBA', (240, 240), color)
                 photo = ImageTk.PhotoImage(img)
-                self.images.append(photo)
+                # Create a simple AnimatedImage wrapper
+                animated_img = AnimatedImage.__new__(AnimatedImage)
+                animated_img.frames = [photo]
+                animated_img.frame_count = 1
+                animated_img.current_frame = 0
+                self.animated_images.append(animated_img)
 
     def setup_window(self):
         #remove window decorations
@@ -183,10 +255,12 @@ class Fight:
         return False
 
     def change_p1_image(self):
-        self.current_image_index = (self.current_image_index + 1) % len(self.images)
+        self.current_image_index = (self.current_image_index + 1) % len(self.animated_images)
+        self.animated_images[self.current_image_index].reset_animation()
 
     def change_p2_image(self):
-        self.current_image_index2 = (self.current_image_index2 + 1) % len(self.images)
+        self.current_image_index2 = (self.current_image_index2 + 1) % len(self.animated_images)
+        self.animated_images[self.current_image_index].reset_animation()
 
     def draw(self):
         self.canvas.delete("all")
@@ -199,11 +273,15 @@ class Fight:
             outline = ''
         )
 
-        self.canvas.create_image(
-            self.player1.x, self.player1.y,
-            image = self.images[self.current_image_index],
-            anchor = "nw"
-        )
+        # draw player 1 with current animation frame
+        if self.animated_images:
+            current_frame1 = self.animated_images[self.current_image_index].get_current_frame()
+            self.canvas.create_image(
+                self.player1.x, self.player1.y,
+                image = current_frame1,
+                anchor = "nw"
+            )
+        
         self.canvas.create_text(
             self.player1.x + 110, self.player1.y-30,
             text = self.player1.score,
@@ -212,11 +290,14 @@ class Fight:
             anchor = "nw"
         )
 
-        self.canvas.create_image(
-            self.player2.x, self.player2.y,
-            image = self.images[self.current_image_index2],
-            anchor = "nw"
-        )
+        # draw player 2 with current animation frame
+        if self.animated_images:
+            current_frame2 = self.animated_images[self.current_image_index2].get_current_frame()
+            self.canvas.create_image(
+                self.player2.x, self.player2.y,
+                image = current_frame2,
+                anchor = "nw"
+            )
 
         self.canvas.create_text(
             self.player2.x + 110, self.player2.y-30,
