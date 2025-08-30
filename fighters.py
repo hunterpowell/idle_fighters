@@ -21,7 +21,7 @@ def get_images_folder():
     # always use the directory where the executable is located
     if getattr(sys, 'frozen', False):
         # running as exe
-        exe_dir = os.path.dirname(sys.executable)  # ← This uses where the EXE is located
+        exe_dir = os.path.dirname(sys.executable)
     else:
         # running as script (for dev)
         exe_dir = os.path.dirname(os.path.abspath(__file__))
@@ -97,8 +97,30 @@ class AnimatedImage:
         self.current_frame = 0
         self.last_frame_time = time.time()
 
+class PowerUp:
+    def __init__(self, root):
+        self.width = 120
+        self.height = 120
+
+        self.screen_height = root.winfo_screenheight()
+        self.screen_width = root.winfo_screenwidth()
+
+        self.reposition()
+
+        self.visible = True
+
+    def reposition(self):
+        # random power up spawn (with 120 pixel buffer from edges)
+        buffer = 120
+        self.x = rand.randint(buffer, self.screen_width - buffer)
+        self.y = rand.randint(buffer, self.screen_height - buffer)
+
+
+
+
 class Dude:
     def __init__(self, player, root):
+
         self.width = 240
         self.height = 240
 
@@ -108,6 +130,8 @@ class Dude:
         self.speed = rand.choice([100, 150, 200])
 
         self.score = 0
+
+        self.powered_up = False
 
         self._initial_pos(player)
 
@@ -175,13 +199,20 @@ class Fight:
 
         self.player1 = Dude(1, self.root)
         self.player2 = Dude(2, self.root)
+        self.power_up = PowerUp(self.root)
+
+        particle_path = resource_path('particles.gif')
+        self.particles = AnimatedImage(particle_path, self.player1.width, self.player1.height)
 
         self.high_score = 0
 
         self.animated_images = []
         self.images = []
-        self.load_images(self.player1)
-        self.load_images(self.player2)
+
+        strawberry_path = resource_path('strawberry.gif')
+        self.power_up_gif = AnimatedImage(strawberry_path, self.power_up.width, self.power_up.height)
+
+        self.load_images()
         self.current_image_index = 0
         self.current_image_index2 = (int(len(self.animated_images)/2))
 
@@ -190,10 +221,9 @@ class Fight:
         self.root.bind('<Escape>', self.quit_app)
 
         self.running = True
-
         self.last_time = time.time()
 
-    def load_images(self, player):
+    def load_images(self):
 
         images_folder = get_images_folder()
         suffixes = [".png", ".jpg", ".jpeg", ".gif", ".bmp"]
@@ -228,7 +258,7 @@ class Fight:
         self.root.overrideredirect(True)
         # always on top
         self.root.wm_attributes('-topmost', True)
-        # make #000001 transparent
+        # make #261313 transparent
         self.root.wm_attributes('-transparentcolor', '#261313')
 
         self.screen_width = self.root.winfo_screenwidth()
@@ -247,12 +277,46 @@ class Fight:
             p1.y < p2.y + p2.height and
             p1.y + p1.height > p2.y):
 
-
             p1.dx, p2.dx = p2.dx, p1.dx
             p1.dy, p2.dy = p2.dy, p1.dy
             return True
+            
         
         return False
+    
+    def power_up_collision(self):
+        
+        p1 = self.player1
+        p2 = self.player2
+        item = self.power_up
+
+        if (item.visible):
+
+            # check player 1 power up collision
+            if (p1.x < item.x + item.width and 
+                p1.x + p1.width > item.x and
+                p1.y < item.y + item.height and
+                p1.y + p1.height > item.y):
+
+                p1.powered_up = True
+                item.visible = False
+
+                self.root.after(15000, self.respawn_power_up)
+
+            # check player 2 power up collision
+            elif (p2.x < item.x + item.width and 
+                p2.x + p2.width > item.x and
+                p2.y < item.y + item.height and
+                p2.y + p2.height > item.y):
+
+                p2.powered_up = True
+                item.visible = False
+
+                self.root.after(15000, self.respawn_power_up)
+
+    def respawn_power_up(self):
+        self.power_up.reposition()
+        self.power_up.visible = True
 
     def change_p1_image(self):
         self.current_image_index = (self.current_image_index + 1) % len(self.animated_images)
@@ -282,6 +346,14 @@ class Fight:
                 anchor = "nw"
             )
         
+        if self.player1.powered_up:
+            particle_frame = self.particles.get_current_frame()
+            self.canvas.create_image(
+                self.player1.x, self.player1.y,
+                image = particle_frame,
+                anchor = "nw"
+            )
+        
         self.canvas.create_text(
             self.player1.x + 110, self.player1.y-30,
             text = self.player1.score,
@@ -307,6 +379,14 @@ class Fight:
             anchor = "nw"
         )
 
+        if self.player2.powered_up:
+            particle_frame = self.particles.get_current_frame()
+            self.canvas.create_image(
+                self.player2.x, self.player2.y,
+                image = particle_frame,
+                anchor = "nw"
+            )
+
         self.canvas.create_text(
             0, 0,
             text = (f"High Score : {self.high_score}"),
@@ -315,32 +395,66 @@ class Fight:
             anchor = "nw"
         )
 
+        # draw power up if visible
+        if self.power_up.visible:
+            power_up_frame = self.power_up_gif.get_current_frame()
+            self.canvas.create_image(
+                self.power_up.x, self.power_up.y,
+                image = power_up_frame,
+                anchor = "nw"
+            )
+
+
+
     def animate(self):
 
         current_time = time.time()
         delta_time = current_time - self.last_time
         self.last_time = current_time
 
-        # main animation loop
-        if self.player1.update_pos(delta_time):           # returns corner hit T/F
-            playsound(resource_path('taco_baco.mp3'), block = False)
-            self.player1.score += 5
+        p1 = self.player1
+        p2 = self.player2
 
-        if self.player2.update_pos(delta_time):           # returns corner hit T/F
+        # main animation loop
+        if p1.update_pos(delta_time):           # returns corner hit T/F
             playsound(resource_path('taco_baco.mp3'), block = False)
-            self.player2.score += 5
+            p1.score += 5
+
+        if p2.update_pos(delta_time):           # returns corner hit T/F
+            playsound(resource_path('taco_baco.mp3'), block = False)
+            p2.score += 5
 
         if self.combat_collision():
-            if rand.randint(0, 1):
-                self.change_p1_image()
-                self.player1.score = 0
-                self.player2.score += 1
-            else:
+            # player 1 has powerup, wins
+            if p1.powered_up and not p2.powered_up:
                 self.change_p2_image()
-                self.player2.score = 0
-                self.player1.score += 1
+                p2.score = 0
+                p1.score += 1
+                p1.powered_up = False
 
-        self.high_score = max(self.high_score, self.player1.score, self.player2.score)
+            # player 2 has powerup, wins
+            elif p2.powered_up and not p1.powered_up:
+                self.change_p1_image()
+                p1.score = 0
+                p2.score += 1
+                p2.powered_up = False
+
+            # neither or both have powerup, coinflip
+            else:
+                if rand.randint(0, 1):
+                    self.change_p1_image()
+                    p1.score = 0
+                    p2.score += 1
+                    p2.powered_up = False
+                else:
+                    self.change_p2_image()
+                    p2.score = 0
+                    p1.score += 1
+                    p1.powered_up = False
+
+        self.high_score = max(self.high_score, p1.score, p2.score)
+
+        self.power_up_collision()
 
         self.draw()
 
