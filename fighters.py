@@ -201,7 +201,7 @@ class Fight:
         self.player2 = Dude(2, self.root)
         self.power_up = PowerUp(self.root)
 
-        particle_path = resource_path('particles.gif')
+        particle_path = resource_path('assets/particles.gif')
         self.particles = AnimatedImage(particle_path, self.player1.width, self.player1.height)
 
         self.high_score = 0
@@ -209,7 +209,7 @@ class Fight:
         self.animated_images = []
         self.images = []
 
-        strawberry_path = resource_path('strawberry.gif')
+        strawberry_path = resource_path('assets/strawberry.gif')
         self.power_up_gif = AnimatedImage(strawberry_path, self.power_up.width, self.power_up.height)
 
         self.load_images()
@@ -417,11 +417,11 @@ class Fight:
 
         # main animation loop
         if p1.update_pos(delta_time):           # returns corner hit T/F
-            playsound(resource_path('taco_baco.mp3'), block = False)
+            playsound(resource_path('assets/taco_baco.mp3'), block = False)
             p1.score += 5
 
         if p2.update_pos(delta_time):           # returns corner hit T/F
-            playsound(resource_path('taco_baco.mp3'), block = False)
+            playsound(resource_path('assets/taco_baco.mp3'), block = False)
             p2.score += 5
 
         if self.combat_collision():
