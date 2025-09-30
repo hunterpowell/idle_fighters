@@ -1,7 +1,7 @@
-import Dude
-import PowerUp
-import AnimatedImage as Anim
-from helpers import resource_path, get_images_folder
+from files import Dude
+from files import PowerUp
+from files import AnimatedImage as Anim
+from files import helpers 
 import time
 import tkinter as tk
 from playsound3 import playsound
@@ -20,7 +20,7 @@ class Fight:
         self.player2 = Dude.Dude(2, self.root)
         self.power_up = PowerUp.PowerUp(self.root)
 
-        particle_path = resource_path('assets/particles.gif')
+        particle_path = helpers.resource_path('assets/particles.gif')
         self.particles = Anim.AnimatedImage(particle_path, self.player1.width, self.player1.height)
 
         self.high_score = 0
@@ -28,7 +28,7 @@ class Fight:
         self.animated_images = []
         self.images = []
 
-        strawberry_path = resource_path('assets/strawberry.gif')
+        strawberry_path = helpers.resource_path('assets/strawberry.gif')
         self.power_up_gif = Anim.AnimatedImage(strawberry_path, self.power_up.width, self.power_up.height)
 
         self.load_images()
@@ -44,7 +44,7 @@ class Fight:
 
     def load_images(self):
 
-        images_folder = get_images_folder()
+        images_folder = helpers.get_images_folder()
         suffixes = [".png", ".jpg", ".jpeg", ".gif", ".bmp"]
         print(f"looking for images in: {images_folder}")
 
@@ -66,7 +66,7 @@ class Fight:
                 img = Image.new('RGBA', (240, 240), color)
                 photo = ImageTk.PhotoImage(img)
                 # Create a simple AnimatedImage wrapper
-                animated_img = Anim.__new__(Anim)
+                animated_img = Anim.AnimatedImage.__new__(Anim.AnimatedImage)
                 animated_img.frames = [photo]
                 animated_img.frame_count = 1
                 animated_img.current_frame = 0
@@ -143,7 +143,7 @@ class Fight:
 
     def change_p2_image(self):
         self.current_image_index2 = (self.current_image_index2 + 1) % len(self.animated_images)
-        self.animated_images[self.current_image_index].reset_animation()
+        self.animated_images[self.current_image_index2].reset_animation()
 
     def draw(self):
         self.canvas.delete("all")
@@ -236,11 +236,11 @@ class Fight:
 
         # main animation loop
         if p1.update_pos(delta_time):           # returns corner hit T/F
-            playsound(resource_path('assets/taco_baco.mp3'), block = False)
+            playsound(helpers.resource_path('assets/taco_baco.mp3'), block = False)
             p1.score += 5
 
         if p2.update_pos(delta_time):           # returns corner hit T/F
-            playsound(resource_path('assets/taco_baco.mp3'), block = False)
+            playsound(helpers.resource_path('assets/taco_baco.mp3'), block = False)
             p2.score += 5
 
         if self.combat_collision():

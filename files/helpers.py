@@ -18,7 +18,7 @@ def get_images_folder():
         exe_dir = os.path.dirname(sys.executable)
     else:
         # running as script (for dev)
-        exe_dir = os.path.dirname(os.path.abspath(__file__))
+        exe_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     images_dir = os.path.join(exe_dir, "images")
     os.makedirs(images_dir, exist_ok=True)
