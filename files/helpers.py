@@ -12,6 +12,8 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def get_images_folder():
+    # uncomment this line to make an "all in one" exe file
+    # return resource_path("images")
     # always use the directory where the executable is located
     if getattr(sys, 'frozen', False):
         # running as exe

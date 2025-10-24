@@ -1,19 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+block_cipher = None
 
 a = Analysis(
-    ['fighters.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('images', 'images'), ('taco_baco.mp3', '.')],
-    hiddenimports=[],
+    datas=[('images', 'images'), ('assets', 'assets')],
+    hiddenimports=['PIL._tkinter_finder', 'playsound3'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
+    cipher=block_cipher,
 )
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
@@ -21,7 +23,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='fighters',
+    name='IdleFighters',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -34,4 +36,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=None,
 )

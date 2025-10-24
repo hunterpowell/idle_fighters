@@ -134,7 +134,7 @@ dmypy.json
 Thumbs.db
 
 # Project specific - Image folders
-# images/
+images/
 images1/
 images2/
 images3/
