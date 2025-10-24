@@ -42,6 +42,21 @@ class Fight:
         self.running = True
         self.last_time = time.time()
 
+        # Create persistent canvas objects to avoid recreating them every frame
+        self.bg_rect = None
+        self.p1_image_id = None
+        self.p1_particles_id = None
+        self.p1_score_id = None
+        self.p2_image_id = None
+        self.p2_particles_id = None
+        self.p2_score_id = None
+        self.high_score_id = None
+        self.power_up_id = None
+
+        # Target FPS
+        self.target_fps = 60  # Lower FPS = less CPU usage
+        self.frame_time = 1000 / self.target_fps  # milliseconds per frame
+
     def load_images(self):
 
         images_folder = helpers.get_images_folder()
@@ -146,82 +161,109 @@ class Fight:
         self.animated_images[self.current_image_index2].reset_animation()
 
     def draw(self):
-        self.canvas.delete("all")
+        # Instead of delete("all"), update existing canvas objects
 
-        # force a redraw of the background with the transparent color, prevents weird trails
-        self.canvas.create_rectangle(
-            0, 0, 
-            self.screen_width, self.screen_height, 
-            fill = "#261313", 
-            outline = ''
-        )
+        # Background - create once or update
+        if self.bg_rect is None:
+            self.bg_rect = self.canvas.create_rectangle(
+                0, 0, self.screen_width, self.screen_height,
+                fill="#261313", outline=''
+            )
 
-        # draw player 1 with current animation frame
+        # Player 1 image
         if self.animated_images:
             current_frame1 = self.animated_images[self.current_image_index].get_current_frame()
-            self.canvas.create_image(
-                self.player1.x, self.player1.y,
-                image = current_frame1,
-                anchor = "nw"
-            )
-        
+            if self.p1_image_id is None:
+                self.p1_image_id = self.canvas.create_image(
+                    self.player1.x, self.player1.y, image=current_frame1, anchor="nw"
+                )
+            else:
+                self.canvas.coords(self.p1_image_id, self.player1.x, self.player1.y)
+                self.canvas.itemconfig(self.p1_image_id, image=current_frame1)
+
+        # Player 1 particles
         if self.player1.powered_up:
             particle_frame = self.particles.get_current_frame()
-            self.canvas.create_image(
-                self.player1.x, self.player1.y,
-                image = particle_frame,
-                anchor = "nw"
-            )
-        
-        self.canvas.create_text(
-            self.player1.x + 110, self.player1.y-30,
-            text = self.player1.score,
-            fill = "#ffffff",
-            font = "Arial 32 bold",
-            anchor = "nw"
-        )
+            if self.p1_particles_id is None:
+                self.p1_particles_id = self.canvas.create_image(
+                    self.player1.x, self.player1.y, image=particle_frame, anchor="nw"
+                )
+            else:
+                self.canvas.coords(self.p1_particles_id, self.player1.x, self.player1.y)
+                self.canvas.itemconfig(self.p1_particles_id, image=particle_frame)
+                self.canvas.itemconfig(self.p1_particles_id, state='normal')
+        elif self.p1_particles_id is not None:
+            self.canvas.itemconfig(self.p1_particles_id, state='hidden')
 
-        # draw player 2 with current animation frame
+        # Player 1 score
+        if self.p1_score_id is None:
+            self.p1_score_id = self.canvas.create_text(
+                self.player1.x + 110, self.player1.y - 30,
+                text=str(self.player1.score), fill="#ffffff",
+                font="Arial 32 bold", anchor="nw"
+            )
+        else:
+            self.canvas.coords(self.p1_score_id, self.player1.x + 110, self.player1.y - 30)
+            self.canvas.itemconfig(self.p1_score_id, text=str(self.player1.score))
+
+        # Player 2 image
         if self.animated_images:
             current_frame2 = self.animated_images[self.current_image_index2].get_current_frame()
-            self.canvas.create_image(
-                self.player2.x, self.player2.y,
-                image = current_frame2,
-                anchor = "nw"
-            )
+            if self.p2_image_id is None:
+                self.p2_image_id = self.canvas.create_image(
+                    self.player2.x, self.player2.y, image=current_frame2, anchor="nw"
+                )
+            else:
+                self.canvas.coords(self.p2_image_id, self.player2.x, self.player2.y)
+                self.canvas.itemconfig(self.p2_image_id, image=current_frame2)
 
-        self.canvas.create_text(
-            self.player2.x + 110, self.player2.y-30,
-            text = self.player2.score,
-            fill = "#ffffff",
-            font = "Arial 32 bold",
-            anchor = "nw"
-        )
-
+        # Player 2 particles
         if self.player2.powered_up:
             particle_frame = self.particles.get_current_frame()
-            self.canvas.create_image(
-                self.player2.x, self.player2.y,
-                image = particle_frame,
-                anchor = "nw"
+            if self.p2_particles_id is None:
+                self.p2_particles_id = self.canvas.create_image(
+                    self.player2.x, self.player2.y, image=particle_frame, anchor="nw"
+                )
+            else:
+                self.canvas.coords(self.p2_particles_id, self.player2.x, self.player2.y)
+                self.canvas.itemconfig(self.p2_particles_id, image=particle_frame)
+                self.canvas.itemconfig(self.p2_particles_id, state='normal')
+        elif self.p2_particles_id is not None:
+            self.canvas.itemconfig(self.p2_particles_id, state='hidden')
+
+        # Player 2 score
+        if self.p2_score_id is None:
+            self.p2_score_id = self.canvas.create_text(
+                self.player2.x + 110, self.player2.y - 30,
+                text=str(self.player2.score), fill="#ffffff",
+                font="Arial 32 bold", anchor="nw"
             )
+        else:
+            self.canvas.coords(self.p2_score_id, self.player2.x + 110, self.player2.y - 30)
+            self.canvas.itemconfig(self.p2_score_id, text=str(self.player2.score))
 
-        self.canvas.create_text(
-            0, 0,
-            text = (f"High Score : {self.high_score}"),
-            fill = "#ffffff",
-            font = "Arial 48 bold",
-            anchor = "nw"
-        )
+        # High score
+        if self.high_score_id is None:
+            self.high_score_id = self.canvas.create_text(
+                0, 0, text=f"High Score : {self.high_score}",
+                fill="#ffffff", font="Arial 48 bold", anchor="nw"
+            )
+        else:
+            self.canvas.itemconfig(self.high_score_id, text=f"High Score : {self.high_score}")
 
-        # draw power up if visible
+        # Power-up
         if self.power_up.visible:
             power_up_frame = self.power_up_gif.get_current_frame()
-            self.canvas.create_image(
-                self.power_up.x, self.power_up.y,
-                image = power_up_frame,
-                anchor = "nw"
-            )
+            if self.power_up_id is None:
+                self.power_up_id = self.canvas.create_image(
+                    self.power_up.x, self.power_up.y, image=power_up_frame, anchor="nw"
+                )
+            else:
+                self.canvas.coords(self.power_up_id, self.power_up.x, self.power_up.y)
+                self.canvas.itemconfig(self.power_up_id, image=power_up_frame)
+                self.canvas.itemconfig(self.power_up_id, state='normal')
+        elif self.power_up_id is not None:
+            self.canvas.itemconfig(self.power_up_id, state='hidden')
 
 
 
@@ -288,6 +330,14 @@ class Fight:
 
     def run(self):
         while self.running:
+            frame_start = time.time()
+
             self.animate()
             self.root.update_idletasks()
             self.root.update()
+
+            # FPS limiting - sleep to maintain target frame rate
+            frame_elapsed = (time.time() - frame_start) * 1000  # Convert to milliseconds
+            sleep_time = max(0, self.frame_time - frame_elapsed)
+            if sleep_time > 0:
+                time.sleep(sleep_time / 1000)  # Convert back to seconds
