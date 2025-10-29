@@ -169,6 +169,11 @@ class Fight:
                 0, 0, self.screen_width, self.screen_height,
                 fill="#261313", outline=''
             )
+        else:
+            # Ensure background is at the bottom and redrawn to clear trails
+            self.canvas.tag_lower(self.bg_rect)
+            # Force a redraw by updating coords (even with same values)
+            self.canvas.coords(self.bg_rect, 0, 0, self.screen_width, self.screen_height)
 
         # Player 1 image
         if self.animated_images:
